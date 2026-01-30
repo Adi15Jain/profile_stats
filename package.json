@@ -1,5 +1,5 @@
 {
-  "name": "profile-stats",
+  "name": "profile_stats",
   "version": "1.0.0",
   "private": true,
   "type": "module"
