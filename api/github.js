@@ -100,7 +100,7 @@ export default async function handler(req, res) {
   <text x="40" y="58"
         font-size="13"
         fill="#94a3b8">
-    ${yearsOnGitHub} years · ${user.public_repos} repositories
+    Since ${yearsOnGitHub} years · ${user.public_repos} repositories
   </text>
 
   <!-- Divider -->
