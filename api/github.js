@@ -254,3 +254,13 @@ export default async function handler(req, res) {
   </text>
 
 </svg>
+`;
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=21600');
+    res.status(200).send(svg);
+  } catch (err) {
+    console.error('GitHub stats handler error:', err);
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.status(200).send('<svg></svg>');
+  }
+}
