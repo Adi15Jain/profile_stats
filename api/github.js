@@ -36,7 +36,7 @@ export default async function handler(req, res) {
       (1000 * 60 * 60 * 24 * 365)
     ).toFixed(1);
 
-    // Seasoned calculation including overall 20+ years developer experience
+    // Seasoned calculation including overall developer experience
     const devExperienceYears = 4.4;
     const score = Math.min(
       98,
@@ -48,6 +48,27 @@ export default async function handler(req, res) {
         devExperienceYears * 2.3
       ),
     );
+
+    // Dynamic career ranking based on experience years
+    let badgeTitle = 'FULL-STACK DEVELOPER';
+    let careerSub = 'ACTIVE PROFESSIONAL';
+    const floorExp = Math.floor(devExperienceYears);
+    const expLabel = `${floorExp}+ Year${floorExp !== 1 ? 's' : ''}`;
+    const estYear = new Date().getFullYear() - floorExp;
+
+    if (devExperienceYears >= 15) {
+      badgeTitle = 'PRINCIPAL SYSTEMS ARCHITECT';
+      careerSub = `EST. ${estYear} · SENIOR VETERAN`;
+    } else if (devExperienceYears >= 8) {
+      badgeTitle = 'LEAD FULL-STACK ARCHITECT';
+      careerSub = `EST. ${estYear} · TECH LEAD`;
+    } else if (devExperienceYears >= 4) {
+      badgeTitle = 'SENIOR FULL-STACK DEVELOPER';
+      careerSub = `EST. ${estYear} · EXPERT DEV`;
+    } else {
+      badgeTitle = 'FULL-STACK DEVELOPER';
+      careerSub = `EST. ${estYear} · ACTIVE PRO`;
+    }
 
     const svg = `
 <svg width="480" height="320"
@@ -156,8 +177,8 @@ export default async function handler(req, res) {
   
   <!-- Badge Tag -->
   <g transform="translate(24, 24)">
-    <rect x="0" y="0" width="168" height="18" rx="4" fill="#6366f1" fill-opacity="0.15" stroke="#6366f1" stroke-opacity="0.4" stroke-width="0.8"/>
-    <text x="8" y="9.5" fill="#a5b4fc" font-size="8.5" font-weight="700" letter-spacing="1.2">PRINCIPAL SYSTEMS ARCHITECT</text>
+    <rect x="0" y="0" width="172" height="18" rx="4" fill="#6366f1" fill-opacity="0.15" stroke="#6366f1" stroke-opacity="0.4" stroke-width="0.8"/>
+    <text x="8" y="9.5" fill="#a5b4fc" font-size="8.5" font-weight="700" letter-spacing="1.2">${badgeTitle}</text>
   </g>
 
   <!-- Title -->
@@ -167,7 +188,7 @@ export default async function handler(req, res) {
   
   <!-- Subtitle -->
   <text x="174" y="56" font-size="11" font-weight="500" fill="#475569">
-    // EST. 2006 · SENIOR VETERAN
+    // ${careerSub}
   </text>
 
   <!-- Status indicator -->
@@ -187,7 +208,7 @@ export default async function handler(req, res) {
   <g transform="translate(24, 84)" filter="url(#cardShadow)">
     <rect width="136" height="58" rx="8" fill="url(#widgetGrad)" stroke="#334155" stroke-opacity="0.4" stroke-width="1"/>
     <text x="12" y="20" class="widget-lbl">DEVELOPER EXP</text>
-    <text x="12" y="38" class="widget-val" fill="#a5b4fc">20+ Years</text>
+    <text x="12" y="38" class="widget-val" fill="#a5b4fc">${expLabel}</text>
     <!-- Micro-graph indicator line -->
     <path d="M 95 38 Q 105 28 115 36 T 125 24" fill="none" stroke="#6366f1" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.8"/>
   </g>
