@@ -1,134 +1,139 @@
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 
 export default async function handler(req, res) {
-  try {
-    const headers = {
-      Authorization: `token ${GITHUB_TOKEN}`,
-      'User-Agent': 'profile-stats',
-    };
+    try {
+        const headers = {
+            Authorization: `token ${GITHUB_TOKEN}`,
+            "User-Agent": "profile-stats",
+        };
 
-    const reposRes = await fetch(
-      'https://api.github.com/user/repos?per_page=100',
-      { headers },
-    );
+        const reposRes = await fetch(
+            "https://api.github.com/user/repos?per_page=100",
+            { headers },
+        );
 
-    if (!reposRes.ok) throw new Error('GitHub repos fetch failed');
-    const repos = await reposRes.json();
-    const totals = {};
+        if (!reposRes.ok) throw new Error("GitHub repos fetch failed");
+        const repos = await reposRes.json();
+        const totals = {};
 
-    // Parallelized fetching of repo language breakdowns to prevent Vercel timeouts
-    const repoPromises = repos
-      .filter((repo) => !repo.fork)
-      .map(async (repo) => {
-        try {
-          const langRes = await fetch(repo.languages_url, { headers });
-          if (langRes.ok) {
-            return await langRes.json();
-          }
-        } catch (err) {
-          console.error(`Error fetching languages for ${repo.name}:`, err);
+        // Parallelized fetching of repo language breakdowns to prevent Vercel timeouts
+        const repoPromises = repos
+            .filter((repo) => !repo.fork)
+            .map(async (repo) => {
+                try {
+                    const langRes = await fetch(repo.languages_url, {
+                        headers,
+                    });
+                    if (langRes.ok) {
+                        return await langRes.json();
+                    }
+                } catch (err) {
+                    console.error(
+                        `Error fetching languages for ${repo.name}:`,
+                        err,
+                    );
+                }
+                return {};
+            });
+
+        const allLangs = await Promise.all(repoPromises);
+
+        for (const langs of allLangs) {
+            if (!langs) continue;
+            for (const [lang, loc] of Object.entries(langs)) {
+                totals[lang] = (totals[lang] || 0) + loc;
+            }
         }
-        return {};
-      });
 
-    const allLangs = await Promise.all(repoPromises);
+        const top = Object.entries(totals)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
 
-    for (const langs of allLangs) {
-      if (!langs) continue;
-      for (const [lang, loc] of Object.entries(langs)) {
-        totals[lang] = (totals[lang] || 0) + loc;
-      }
-    }
+        // Compute total LOC in top 5 to get percentage weight
+        const topSum = top.reduce((sum, item) => sum + item[1], 0);
 
-    const top = Object.entries(totals)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
+        // Dynamic 3D Isometric themes for columns
+        const themes = {
+            teal: {
+                name: "Teal",
+                left: ["#047857", "#064e3b"],
+                right: ["#10b981", "#065f46"],
+                top: ["#34d399", "#10b981"],
+                glow: "#10b981",
+            },
+            blue: {
+                name: "Blue",
+                left: ["#1d4ed8", "#172554"],
+                right: ["#3b82f6", "#1e40af"],
+                top: ["#60a5fa", "#3b82f6"],
+                glow: "#3b82f6",
+            },
+            purple: {
+                name: "Purple",
+                left: ["#7c3aed", "#3b0764"],
+                right: ["#9333ea", "#581c87"],
+                top: ["#c084fc", "#9333ea"],
+                glow: "#9333ea",
+            },
+            orange: {
+                name: "Orange",
+                left: ["#ea580c", "#431407"],
+                right: ["#f97316", "#9a3412"],
+                top: ["#fb923c", "#f97316"],
+                glow: "#f97316",
+            },
+            yellow: {
+                name: "Yellow",
+                left: ["#ca8a04", "#422006"],
+                right: ["#eab308", "#a16207"],
+                top: ["#fde047", "#eab308"],
+                glow: "#eab308",
+            },
+        };
 
-    // Compute total LOC in top 5 to get percentage weight
-    const topSum = top.reduce((sum, item) => sum + item[1], 0);
+        // Brand color mapping
+        const langToTheme = {
+            typescript: themes.blue,
+            javascript: themes.yellow,
+            python: themes.teal,
+            html: themes.orange,
+            css: themes.purple,
+            rust: themes.orange,
+            go: themes.blue,
+            c: themes.blue,
+            cpp: themes.blue,
+        };
 
-    // Dynamic 3D Isometric themes for columns
-    const themes = {
-      teal: {
-        name: 'Teal',
-        left: ['#047857', '#064e3b'],
-        right: ['#10b981', '#065f46'],
-        top: ['#34d399', '#10b981'],
-        glow: '#10b981'
-      },
-      blue: {
-        name: 'Blue',
-        left: ['#1d4ed8', '#172554'],
-        right: ['#3b82f6', '#1e40af'],
-        top: ['#60a5fa', '#3b82f6'],
-        glow: '#3b82f6'
-      },
-      purple: {
-        name: 'Purple',
-        left: ['#7c3aed', '#3b0764'],
-        right: ['#9333ea', '#581c87'],
-        top: ['#c084fc', '#9333ea'],
-        glow: '#9333ea'
-      },
-      orange: {
-        name: 'Orange',
-        left: ['#ea580c', '#431407'],
-        right: ['#f97316', '#9a3412'],
-        top: ['#fb923c', '#f97316'],
-        glow: '#f97316'
-      },
-      yellow: {
-        name: 'Yellow',
-        left: ['#ca8a04', '#422006'],
-        right: ['#eab308', '#a16207'],
-        top: ['#fde047', '#eab308'],
-        glow: '#eab308'
-      }
-    };
+        const keys = Object.keys(themes);
 
-    // Brand color mapping
-    const langToTheme = {
-      typescript: themes.blue,
-      javascript: themes.yellow,
-      python: themes.teal,
-      html: themes.orange,
-      css: themes.purple,
-      rust: themes.orange,
-      go: themes.blue,
-      c: themes.blue,
-      cpp: themes.blue
-    };
+        let gradientDefs = "";
+        let columnsSVG = "";
 
-    const keys = Object.keys(themes);
+        // Core coordinates
+        const cy = 246; // base Y level
+        const w = 15; // isometric column half-width
+        const dDepth = 7; // isometric perspective depth depth
+        const maxH = 120; // maximum pillar height
 
-    let gradientDefs = '';
-    let columnsSVG = '';
+        // Standardize positions for 5 pillars
+        const cxPositions = [72, 156, 240, 324, 408];
 
-    // Core coordinates
-    const cy = 246;          // base Y level
-    const w = 15;            // isometric column half-width
-    const dDepth = 7;        // isometric perspective depth depth
-    const maxH = 120;        // maximum pillar height
+        // Compute the max LOC value in top 5 for visual scaling
+        const maxLOC = top.length > 0 ? top[0][1] : 1;
 
-    // Standardize positions for 5 pillars
-    const cxPositions = [72, 156, 240, 324, 408];
+        top.forEach(([lang, loc], i) => {
+            const cx = cxPositions[i];
+            const key = lang.toLowerCase();
+            // Select official brand color scheme, or fallback based on index
+            const theme = langToTheme[key] || themes[keys[i % keys.length]];
+            const pct = topSum > 0 ? (loc / topSum) * 100 : 0;
 
-    // Compute the max LOC value in top 5 for visual scaling
-    const maxLOC = top.length > 0 ? top[0][1] : 1;
+            // Visual height scaling (highest language takes maxH, others scale down proportionally)
+            // Minimum height of 30px to ensure beautiful volumetric shape is visible
+            const targetH = Math.round(30 + (loc / maxLOC) * (maxH - 30));
 
-    top.forEach(([lang, loc], i) => {
-      const cx = cxPositions[i];
-      const key = lang.toLowerCase();
-      // Select official brand color scheme, or fallback based on index
-      const theme = langToTheme[key] || themes[keys[i % keys.length]];
-      const pct = topSum > 0 ? (loc / topSum) * 100 : 0;
-
-      // Visual height scaling (highest language takes maxH, others scale down proportionally)
-      // Minimum height of 30px to ensure beautiful volumetric shape is visible
-      const targetH = Math.round(30 + ((loc / maxLOC) * (maxH - 30)));
-
-      // Render gradient configurations
-      gradientDefs += `
+            // Render gradient configurations
+            gradientDefs += `
     <linearGradient id="leftGrad-${i}" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="${theme.left[0]}"/>
       <stop offset="100%" stop-color="${theme.left[1]}"/>
@@ -147,7 +152,7 @@ export default async function handler(req, res) {
     </radialGradient>
       `;
 
-      columnsSVG += `
+            columnsSVG += `
   <!-- Pillar ${i + 1}: ${lang} -->
   <g opacity="0">
     <animate attributeName="opacity"
@@ -245,9 +250,9 @@ export default async function handler(req, res) {
 
   </g>
       `;
-    });
+        });
 
-    const svg = `
+        const svg = `
 <svg width="480" height="320"
      viewBox="0 0 480 320"
      xmlns="http://www.w3.org/2000/svg">
@@ -378,13 +383,13 @@ export default async function handler(req, res) {
 </svg>
 `;
 
-    res.setHeader('Content-Type', 'image/svg+xml');
-    res.setHeader('Cache-Control', 'public, max-age=21600');
-    res.status(200).send(svg);
-  } catch (err) {
-    console.error('GitHub langs endpoint error:', err);
-    res.setHeader('Content-Type', 'image/svg+xml');
-    res.status(200).send(`
+        res.setHeader("Content-Type", "image/svg+xml");
+        res.setHeader("Cache-Control", "public, max-age=21600");
+        res.status(200).send(svg);
+    } catch (err) {
+        console.error("GitHub langs endpoint error:", err);
+        res.setHeader("Content-Type", "image/svg+xml");
+        res.status(200).send(`
 <svg width="480" height="320" xmlns="http://www.w3.org/2000/svg">
   <rect width="100%" height="100%" rx="16" fill="#0f172a" stroke="#ef4444" stroke-width="2"/>
   <text x="240" y="160" dominant-baseline="middle" text-anchor="middle" fill="#f8fafc" font-family="sans-serif" font-size="14" font-weight="bold">
@@ -392,5 +397,5 @@ export default async function handler(req, res) {
   </text>
 </svg>
 `);
-  }
+    }
 }
