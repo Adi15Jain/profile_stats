@@ -1,19 +1,16 @@
-import { renderContribGraph } from "../lib/contribGraph.js";
 import { fetchGitHubData } from "../lib/githubData.js";
+import { renderProjectsSVG } from "../lib/projectsCard.js";
 
 export default async function handler(req, res) {
     try {
-        const { contributions } = await fetchGitHubData();
-        const svg = renderContribGraph({
-            weeks: contributions.weeks,
-            total: contributions.total,
-        });
+        const { pinned } = await fetchGitHubData();
+        const svg = renderProjectsSVG({ pinned });
 
         res.setHeader("Content-Type", "image/svg+xml");
         res.setHeader("Cache-Control", "public, max-age=21600");
         res.status(200).send(svg);
     } catch (err) {
-        console.error("Contributions handler error:", err);
+        console.error("Projects handler error:", err);
         res.setHeader("Content-Type", "image/svg+xml");
         res.status(200).send("<svg xmlns='http://www.w3.org/2000/svg'></svg>");
     }
