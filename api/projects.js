@@ -1,11 +1,21 @@
 import { fetchGitHubData } from "../lib/githubData.js";
 import { renderProjectsSVG } from "../lib/projectsCard.js";
+import { decorateWithGitHub, FEATURED } from "../lib/featured.js";
+import { withFonts } from "../lib/theme.js";
 
 export default async function handler(req, res) {
+    // The card is curated (lib/featured.js); GitHub only supplies live numbers
+    // on top, so a token failure costs stars, not the whole card.
+    let projects = FEATURED;
     try {
         const { pinned } = await fetchGitHubData();
-        const svg = renderProjectsSVG({ pinned });
+        projects = decorateWithGitHub(pinned);
+    } catch (err) {
+        console.error("Projects: GitHub enrich failed, serving curated data:", err.message);
+    }
 
+    try {
+        const svg = withFonts(renderProjectsSVG({ projects }));
         res.setHeader("Content-Type", "image/svg+xml");
         res.setHeader("Cache-Control", "public, max-age=21600");
         res.status(200).send(svg);
