@@ -10,6 +10,8 @@
 //            every weight the cards use.
 //   THUMBS — 640x360 WebP screenshots of the featured projects, resized from
 //            the portfolio's public/images with sips + cwebp.
+//   ROOM   — the hero's 3D room, cropped out of a render of the live site and
+//            kept in assets/hero-room.png so this stays reproducible.
 //
 // Run it whenever a screenshot changes:
 //   node scripts/build-assets.mjs
@@ -20,6 +22,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const PORTFOLIO_IMAGES =
     process.env.PORTFOLIO_IMAGES ||
@@ -47,6 +50,17 @@ async function latinWoff2(familyQuery) {
     const url = latin.match(/url\((https[^)]+)\)/)[1];
     const buf = await (await fetch(url, { headers: { "User-Agent": UA } })).arrayBuffer();
     return Buffer.from(buf).toString("base64");
+}
+
+// The room keeps its own 4:3-ish framing, so it only gets width-fit + encoded.
+function roomBase64(tmp) {
+    const src = fileURLToPath(new URL("../assets/hero-room.png", import.meta.url));
+    if (!existsSync(src)) throw new Error(`Missing room render: ${src}`);
+    const png = join(tmp, "room.png");
+    execFileSync("sips", ["-Z", "680", src, "--out", png], { stdio: "ignore" });
+    const webp = join(tmp, "room.webp");
+    execFileSync("cwebp", ["-q", "76", "-quiet", png, "-o", webp]);
+    return readFileSync(webp).toString("base64");
 }
 
 function thumbBase64(file, tmp) {
@@ -77,6 +91,9 @@ async function main() {
         console.log(`Geist       ${kb(geist)}`);
         console.log(`Geist Mono  ${kb(geistMono)}`);
 
+        const room = roomBase64(tmp);
+        console.log(`room        ${kb(room)}`);
+
         const thumbs = SHOTS.map(([id, file]) => {
             const b64 = thumbBase64(file, tmp);
             console.log(`${id.padEnd(11)} ${kb(b64)}`);
@@ -92,6 +109,10 @@ export const FONT_GEIST_WOFF2 =
 
 export const FONT_GEIST_MONO_WOFF2 =
     "${geistMono}";
+
+// The hero's 3D room, cropped from a render of the live site.
+export const HERO_ROOM =
+    "${room}";
 
 // 640x360 WebP screenshots, keyed by the project ids in lib/featured.js.
 export const THUMBS = {
